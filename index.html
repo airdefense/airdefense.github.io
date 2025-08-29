@@ -423,7 +423,7 @@
     <div id="capture-wrapper">
         <div id="map"></div>
         <div id="stats-header-panel" class="panel">
-            <span id="map-title" contenteditable="true" title="Click to edit title">AirDefense</span>
+            <span id="map-title" contenteditable="true" title="Click to edit title">AirDefense ✈️</span>
             <span id="map-date"></span>
             <div id="stats-container"></div>
         </div>
@@ -703,7 +703,7 @@
                         map.setView(savedState.view.center, savedState.view.zoom);
                     }
 
-                    ui.mapTitle.textContent = savedState.title || 'AirDefense';
+                    ui.mapTitle.textContent = savedState.title || 'AirDefense ✈️';
 
                 } catch (error) {
                     console.error("Failed to load state from localStorage:", error);
@@ -783,12 +783,13 @@
                     map.removeLayer(tempMarker);
                     tempMarker = null;
                     map.off('mousemove', rotateTempMarker);
-                    createTarget(Date.now(), activeState.type, finalLatLng, finalAngle, [finalLatLng], { action: 'create' });
+                    const newTarget = createTarget(Date.now(), activeState.type, finalLatLng, finalAngle, [finalLatLng]);
+                    addHistory('create', { targetId: newTarget.id, after: serializeTarget(newTarget) });
                     showNotification(`Click to place another ${targetTypes[activeState.type].name}, or select another tool.`);
                 }
             });
 
-            function createTarget(id, type, latlng, rotation, trailPoints, historyOptions = {}) {
+            function createTarget(id, type, latlng, rotation, trailPoints) {
                 const targetColor = targetTypes[type].color;
                 const marker = L.rotatedMarker(latlng, { icon: createIcon(type), draggable: true, rotationAngle: rotation }).addTo(map);
 
@@ -799,10 +800,10 @@
                 activeTargets.push(target);
                 updateTrail(target);
 
-                if (historyOptions.action) addHistory(historyOptions.action, { targetId: target.id, targetData: serializeTarget(target) });
-
-                updateAllStats();
-                saveState();
+                if (!isRestoringState) {
+                    updateAllStats();
+                    saveState();
+                }
                 return target;
             }
 
@@ -825,11 +826,15 @@
                     preMoveState = null;
 
                 target.marker.on('dragstart', () => {
+                    if (activeState.mode !== null) setActiveMode(null);
+
                     if (target.pendingDeletion) {
+                        const beforeState = serializeTarget(target);
                         setPendingDeletionState(target, false);
+                        const afterState = serializeTarget(target);
+                        addHistory('update', { targetId: target.id, before: beforeState, after: afterState });
                         showNotification('Deletion cancelled by moving target.', 2000);
                     }
-                    if (activeState.mode !== null) setActiveMode(null);
                     preMoveState = serializeTarget(target);
                     lastDragPoint = map.project(target.marker.getLatLng());
                 });
@@ -852,10 +857,16 @@
                 });
                 target.marker.on('click', () => {
                     if (activeState.mode === 'delete') {
+                        const beforeState = serializeTarget(target);
                         if (target.pendingDeletion) {
-                            deleteTarget(target.id, { action: 'delete' });
+                            addHistory('delete', { targetId: target.id, before: beforeState });
+                            deleteTarget(target.id);
+                            showNotification(`${targetTypes[target.type].name} target permanently deleted.`, 2000);
                         } else {
                             setPendingDeletionState(target, true);
+                            const afterState = serializeTarget(target);
+                            addHistory('update', { targetId: target.id, before: beforeState, after: afterState });
+                            showNotification('Target marked for deletion. Click again to confirm.', 4000);
                         }
                     }
                 });
@@ -865,20 +876,23 @@
                 target.pendingDeletion = isPending;
                 target.marker._icon.classList.toggle('pending-deletion', isPending);
                 target.trail.getElement()?.classList.toggle('pending-deletion', isPending);
-                updateAllStats();
+                if (!isRestoringState) {
+                    updateAllStats();
+                    saveState();
+                }
             }
 
-            function deleteTarget(targetId, historyOptions = {}) {
+            function deleteTarget(targetId) {
                 const targetIndex = activeTargets.findIndex(t => t.id === targetId);
                 if (targetIndex > -1) {
                     const target = activeTargets[targetIndex];
-                    if (historyOptions.action) addHistory(historyOptions.action, { targetData: serializeTarget(target) });
                     map.removeLayer(target.marker);
                     map.removeLayer(target.trail);
                     activeTargets.splice(targetIndex, 1);
-                    updateAllStats();
-                    saveState();
-                    if (historyOptions.action) showNotification(`${targetTypes[target.type].name} target deleted.`, 2000);
+                    if (!isRestoringState) {
+                        updateAllStats();
+                        saveState();
+                    }
                 }
             }
 
@@ -989,29 +1003,37 @@
                 updateHistoryButtons();
             }
 
+            function applyTargetState(target, stateData) {
+                const latlng = L.latLng(stateData.latlng.lat, stateData.latlng.lng);
+                const trailPoints = stateData.trailPoints.map(p => L.latLng(p.lat, p.lng));
+                target.marker.setLatLng(latlng);
+                target.marker.setRotationAngle(stateData.rotation);
+                target.rotation = stateData.rotation;
+                target.trailPoints = trailPoints;
+                updateTrail(target);
+                setPendingDeletionState(target, stateData.pendingDeletion);
+            }
+
+
             function undo() {
                 if (undoStack.length === 0) return;
                 const lastAction = undoStack.pop();
                 redoStack.push(lastAction);
                 isRestoringState = true;
+
+                const target = activeTargets.find(t => t.id === lastAction.data.targetId);
+
                 if (lastAction.action === 'create') {
-                    deleteTarget(lastAction.data.targetData.id);
+                    deleteTarget(lastAction.data.targetId);
                 } else if (lastAction.action === 'delete') {
-                    const d = lastAction.data.targetData;
-                    const target = createTarget(d.id, d.type, L.latLng(d.latlng), d.rotation, d.trailPoints.map(p => L.latLng(p)));
-                    if (d.pendingDeletion) setPendingDeletionState(target, true);
-                } else if (lastAction.action === 'move') {
-                    const target = activeTargets.find(t => t.id === lastAction.data.targetId);
-                    const before = lastAction.data.before;
-                    if (target) {
-                        target.marker.setLatLng(L.latLng(before.latlng));
-                        target.marker.setRotationAngle(before.rotation);
-                        target.rotation = before.rotation;
-                        target.trailPoints = before.trailPoints.map(p => L.latLng(p));
-                        setPendingDeletionState(target, before.pendingDeletion); // Restore pending state
-                        updateTrail(target);
-                    }
+                    const d = lastAction.data.before;
+                    createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
+                    const newTarget = activeTargets.find(t => t.id === d.id);
+                    setPendingDeletionState(newTarget, true);
+                } else if (lastAction.action === 'move' || lastAction.action === 'update') {
+                    if (target) applyTargetState(target, lastAction.data.before);
                 }
+
                 isRestoringState = false;
                 updateHistoryButtons();
                 updateAllStats();
@@ -1023,24 +1045,18 @@
                 const nextAction = redoStack.pop();
                 undoStack.push(nextAction);
                 isRestoringState = true;
+
+                const target = activeTargets.find(t => t.id === nextAction.data.targetId);
+
                 if (nextAction.action === 'create') {
-                    const d = nextAction.data.targetData;
-                    const target = createTarget(d.id, d.type, L.latLng(d.latlng), d.rotation, d.trailPoints.map(p => L.latLng(p)));
-                    if (d.pendingDeletion) setPendingDeletionState(target, true);
+                    const d = nextAction.data.after;
+                    createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
                 } else if (nextAction.action === 'delete') {
-                    deleteTarget(nextAction.data.targetData.id);
-                } else if (nextAction.action === 'move') {
-                    const target = activeTargets.find(t => t.id === nextAction.data.targetId);
-                    const after = nextAction.data.after;
-                    if (target) {
-                        target.marker.setLatLng(L.latLng(after.latlng));
-                        target.marker.setRotationAngle(after.rotation);
-                        target.rotation = after.rotation;
-                        target.trailPoints = after.trailPoints.map(p => L.latLng(p));
-                        setPendingDeletionState(target, after.pendingDeletion); // Restore pending state
-                        updateTrail(target);
-                    }
+                    deleteTarget(nextAction.data.targetId);
+                } else if (nextAction.action === 'move' || nextAction.action === 'update') {
+                    if (target) applyTargetState(target, nextAction.data.after);
                 }
+
                 isRestoringState = false;
                 updateHistoryButtons();
                 updateAllStats();
