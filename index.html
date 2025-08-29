@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Precision Interactive Map v24 (Simplified Trail)</title>
+    <title>AirDefense: Interactive Airspace Analysis Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -423,7 +423,7 @@
     <div id="capture-wrapper">
         <div id="map"></div>
         <div id="stats-header-panel" class="panel">
-            <span id="map-title" contenteditable="true" title="Click to edit title">Precision Interactive Map</span>
+            <span id="map-title" contenteditable="true" title="Click to edit title">AirDefense</span>
             <span id="map-date"></span>
             <div id="stats-container"></div>
         </div>
@@ -703,7 +703,7 @@
                         map.setView(savedState.view.center, savedState.view.zoom);
                     }
 
-                    ui.mapTitle.textContent = savedState.title || 'Precision Interactive Map';
+                    ui.mapTitle.textContent = savedState.title || 'AirDefense';
 
                 } catch (error) {
                     console.error("Failed to load state from localStorage:", error);
