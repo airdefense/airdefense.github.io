@@ -49,7 +49,8 @@
             height: 100%;
         }
 
-        #map.adding-target {
+        #map.adding-target,
+        #map.adding-multiple {
             cursor: crosshair;
         }
 
@@ -73,7 +74,8 @@
         /* Rule to hide UI elements during image capture */
         body.saving-map .fab,
         body.saving-map .leaflet-control-container,
-        body.saving-map .control-panel {
+        body.saving-map .control-panel,
+        body.saving-map #coordinate-modal {
             opacity: 0 !important;
             pointer-events: none !important;
             transition: opacity 0.2s ease !important;
@@ -93,12 +95,13 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            padding: 10px 20px;
+            padding: 14px 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 16px;
             white-space: nowrap;
+            border-radius: 16px;
         }
 
         #stats-header-panel.is-hidden {
@@ -108,7 +111,7 @@
         }
 
         #map-title {
-            font-size: 16px;
+            font-size: 20px;
             font-weight: 600;
             padding: 4px 8px;
             border-radius: 6px;
@@ -121,7 +124,7 @@
         }
 
         #map-date {
-            font-size: 15px;
+            font-size: 20px;
             padding: 0 15px;
             border-left: 1px solid var(--border-color);
             padding-right: 12px;
@@ -131,13 +134,13 @@
         #stats-container {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 18px;
         }
 
         .stat-item {
             display: inline-flex;
             align-items: center;
-            font-size: 15px;
+            font-size: 20px;
         }
 
         .stat-item img {
@@ -209,13 +212,17 @@
             stroke-width: 2.5;
         }
 
+        .target-button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
         .panel button:not(.panel-close-btn) {
             display: flex;
             align-items: center;
             justify-content: flex-start;
             gap: 12px;
-            width: 100%;
-            margin-bottom: 8px;
             padding: 10px 15px;
             background: rgba(255, 255, 255, 0.08);
             color: var(--text-color);
@@ -226,6 +233,18 @@
             font-size: 14px;
             text-align: left;
             font-family: inherit;
+        }
+
+        .target-button-group .main-btn {
+            flex-grow: 1;
+        }
+
+        .target-button-group .bulk-add-btn {
+            flex-shrink: 0;
+            width: 40px;
+            /* Adjust width as needed */
+            padding: 10px;
+            justify-content: center;
         }
 
         .panel button:not(.panel-close-btn):hover {
@@ -296,11 +315,8 @@
         #notification {
             position: absolute;
             bottom: 15px;
-            /* CHANGED: from 'top' */
             left: 15px;
-            /* CHANGED: from 'left: 50%' */
             transform: translateY(10px);
-            /* CHANGED: for new slide-up animation */
             background: var(--panel-bg);
             color: #fff;
             padding: 10px 25px;
@@ -318,7 +334,6 @@
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
-            /* CHANGED: for new slide-up animation */
         }
 
         hr.separator {
@@ -331,6 +346,11 @@
         .history-controls {
             display: flex;
             gap: 8px;
+        }
+
+        .history-controls button {
+            width: 100%;
+            margin-bottom: 8px;
         }
 
         .fab {
@@ -371,6 +391,109 @@
         #header-toggle-btn {
             top: 15px;
             left: 15px;
+        }
+
+        /* MODAL STYLES */
+        #coordinate-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 13, 26, 0.5);
+            /* Use body background color with alpha */
+            backdrop-filter: blur(5px);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        #coordinate-modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* The modal content now uses the .panel class for a consistent look */
+        .modal-content {
+            width: 90vw;
+            max-width: 550px;
+            padding: 20px 25px;
+            /* Inherits background, blur, border from .panel class */
+            transform: translateY(10px) scale(0.98);
+            transition: transform 0.3s ease;
+        }
+
+        #coordinate-modal.visible .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Use panel-header for consistency */
+        .modal-content .panel-header {
+            margin-bottom: 10px;
+            padding-bottom: 15px;
+        }
+
+        .modal-instructions {
+            font-size: 13px;
+            color: var(--text-color-muted);
+            margin: 0 0 15px 0;
+            line-height: 1.6;
+        }
+
+        .modal-instructions code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #coordinate-textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--button-border-radius);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            padding: 12px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        #coordinate-textarea:focus {
+            outline: none;
+            border-color: var(--highlight-blue);
+            box-shadow: 0 0 10px rgba(13, 142, 255, 0.4);
+        }
+
+        /* The main submit button */
+        #modal-submit-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        #modal-submit-btn:not(:disabled) {
+            background: var(--highlight-blue);
+            border-color: #3b9fff;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(13, 142, 255, 0.5);
+        }
+
+        #modal-submit-btn:not(:disabled):hover {
+            background: #25baff;
+            /* Lighter blue on hover */
+            border-color: #5cbaff;
         }
 
         @media (max-width: 768px) {
@@ -422,6 +545,7 @@
 <body>
     <div id="capture-wrapper">
         <div id="map"></div>
+
         <div id="stats-header-panel" class="panel">
             <span id="map-title" contenteditable="true" title="Click to edit title">AirDefense ✈️</span>
             <span id="map-date"></span>
@@ -433,21 +557,22 @@
                 <h3>Tools</h3>
                 <button id="controls-close-btn" class="panel-close-btn" title="Hide Tools"></button>
             </div>
-            <button id="drone-btn" title="Select Drone target"></button>
-            <button id="rocket-btn" title="Select Rocket target"></button>
-            <button id="ballistics-btn" title="Select Ballistics target"></button>
-            <button id="aeroballistics-btn" title="Select Aeroballistics target"></button>
-            <button id="other-btn" title="Select Other target"></button>
+            <!-- Target Buttons will be dynamically inserted here -->
+            <div id="target-buttons-container"></div>
             <hr class="separator">
-            <button id="analyze-btn" title="Draw a circle to count targets"></button>
-            <button id="delete-btn" class="delete" title="Click on a target to delete it"></button>
+            <div class="history-controls">
+                <button id="delete-btn" class="delete" title="Click on a target to delete it"></button>
+                <button id="clear-btn" title="Remove all targets and analysis"></button>
+            </div>
             <hr class="separator">
             <div class="history-controls">
                 <button id="undo-btn" title="Undo (Ctrl+Z)"></button>
                 <button id="redo-btn" title="Redo (Ctrl+Y)"></button>
             </div>
-            <button id="clear-btn" title="Remove all targets and analysis"></button>
-            <button id="save-btn" title="Save map as a PNG image"></button>
+            <div class="history-controls">
+                <button id="analyze-btn" title="Draw a circle to count targets"></button>
+                <button id="save-btn" title="Save map as a PNG image"></button>
+            </div>
         </div>
         <div id="notification" data-html2canvas-ignore="true"></div>
     </div>
@@ -469,6 +594,35 @@
         </svg>
     </button>
 
+    <!-- Coordinate Input Modal -->
+    <div id="coordinate-modal" data-html2canvas-ignore="true">
+        <div class="modal-content panel">
+            <div class="panel-header">
+                <h3>Bulk Add Targets</h3>
+                <button id="modal-close-btn" class="panel-close-btn" title="Close"></button>
+            </div>
+            <p class="modal-instructions">
+                Paste raw text below. The system will automatically find and parse coordinate pairs in the format
+                <code>[50.45, 30.52]</code>.
+            </p>
+            <textarea id="coordinate-textarea"
+                placeholder="Kharkiv Region&#10;[ [50.10, 36.30], [50.12, 36.35] ]&#10;..."></textarea>
+            <div class="modal-actions">
+                <button id="modal-submit-btn" title="No coordinates found" disabled>
+                    <svg class="button-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18" />
+                        <path
+                            d="m18.7 12.4-1.42-1.42-2.12 2.12-1.42-1.42L12.34 13l-2.12 2.12-1.42-1.42L7.4 15l-2.12 2.12L3.86 19" />
+                        <path d="m15 5 3-3 3 3" />
+                        <path d="M18 2v12" />
+                    </svg>
+                    <span>Place Targets</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -478,100 +632,36 @@
     <script>
         // Custom Canvas Layer for Gradient Polylines with rounded corners
         L.GradientPolyline = L.Layer.extend({
-            options: {
-                color: 'grey',
-                weight: 5
-            },
-
-            initialize: function (latlngs, options) {
-                L.setOptions(this, options);
-                this._latlngs = latlngs;
-            },
-
-            onAdd: function (map) {
-                this._map = map;
-                if (!this._canvas) {
-                    this._canvas = L.DomUtil.create('canvas', 'leaflet-zoom-animated');
-                    this.getPane().appendChild(this._canvas);
-                }
-                map.on('moveend', this._reset, this);
-                this._reset();
-            },
-
-            onRemove: function (map) {
-                this.getPane().removeChild(this._canvas);
-                map.off('moveend', this._reset, this);
-            },
-
-            setLatLngs: function (latlngs) {
-                this._latlngs = latlngs;
-                return this._reset();
-            },
-
-            _reset: function () {
-                const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-                L.DomUtil.setPosition(this._canvas, topLeft);
-
-                const size = this._map.getSize();
-                this._canvas.width = size.x;
-                this._canvas.height = size.y;
-
-                this._redraw();
-            },
-
-            getElement: function () {
-                return this._canvas;
-            },
-
+            options: { color: 'grey', weight: 5 },
+            initialize: function (latlngs, options) { L.setOptions(this, options); this._latlngs = latlngs; },
+            onAdd: function (map) { this._map = map; if (!this._canvas) { this._canvas = L.DomUtil.create('canvas', 'leaflet-zoom-animated'); this.getPane().appendChild(this._canvas); } map.on('moveend', this._reset, this); this._reset(); },
+            onRemove: function (map) { this.getPane().removeChild(this._canvas); map.off('moveend', this._reset, this); },
+            setLatLngs: function (latlngs) { this._latlngs = latlngs; return this._reset(); },
+            _reset: function () { const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; this._redraw(); },
+            getElement: function () { return this._canvas; },
             _redraw: function () {
                 const ctx = this._canvas.getContext('2d');
                 ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-
-                if (!this._latlngs || this._latlngs.length < 2) {
-                    return;
-                }
-
+                if (!this._latlngs || this._latlngs.length < 2) { return; }
                 const points = this._latlngs.map(latlng => this._map.latLngToContainerPoint(latlng));
-
                 const first = points[0];
                 const last = points[points.length - 1];
-
                 const gradient = ctx.createLinearGradient(first.x, first.y, last.x, last.y);
                 const color = this._colorToRgba(this.options.color);
-
-                gradient.addColorStop(0, `${color} 0.0)`); // 0% opacity at the end
-                gradient.addColorStop(1, `${color} 0.7)`); // 70% opacity at the start
-
+                gradient.addColorStop(0, `${color} 0.0)`);
+                gradient.addColorStop(1, `${color} 0.7)`);
                 ctx.beginPath();
                 ctx.moveTo(first.x, first.y);
                 points.forEach(p => ctx.lineTo(p.x, p.y));
-
                 ctx.strokeStyle = gradient;
                 ctx.lineWidth = this.options.weight;
-                ctx.lineCap = 'round'; // For smooth ends
-                ctx.lineJoin = 'round'; // For smooth corners
-
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
                 ctx.stroke();
             },
-
-            // Helper to convert color names to rgba strings for gradient
-            _colorToRgba(color) {
-                const ctx = document.createElement('canvas').getContext('2d');
-                ctx.fillStyle = color;
-                const hex = ctx.fillStyle; // #rrggbb
-                if (hex.startsWith('#')) {
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    return `rgba(${r}, ${g}, ${b},`; // returns 'rgba(r,g,b,'
-                }
-                return 'rgba(128, 128, 128,'; // Default grey
-            }
+            _colorToRgba(color) { const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle = color; const hex = ctx.fillStyle; if (hex.startsWith('#')) { const r = parseInt(hex.slice(1, 3), 16); const g = parseInt(hex.slice(3, 5), 16); const b = parseInt(hex.slice(5, 7), 16); return `rgba(${r}, ${g}, ${b},`; } return 'rgba(128, 128, 128,'; }
         });
-
-        L.gradientPolyline = function (latlngs, options) {
-            return new L.GradientPolyline(latlngs, options);
-        };
+        L.gradientPolyline = function (latlngs, options) { return new L.GradientPolyline(latlngs, options); };
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -580,12 +670,9 @@
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             let activeState = { type: null, mode: null };
-            let tempMarker = null,
-                activeTargets = [],
-                analysisCircle = null,
-                circleDrawer;
-            let undoStack = [],
-                redoStack = [];
+            let tempMarker = null, tempMarkersGroup = [];
+            let activeTargets = [], analysisCircle = null, circleDrawer;
+            let undoStack = [], redoStack = [];
             let isRestoringState = false;
 
             const ui = {
@@ -596,6 +683,8 @@
                 mapDate: document.getElementById('map-date'),
                 controlPanel: document.querySelector('.control-panel'),
                 notification: document.getElementById('notification'),
+                modal: document.getElementById('coordinate-modal'),
+                modalTextarea: document.getElementById('coordinate-textarea'),
                 buttons: {}
             };
 
@@ -606,7 +695,8 @@
                 'redo': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>`,
                 'clear': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
                 'save': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
-                'close': `<svg class="button-icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+                'close': `<svg class="button-icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+                'bulk': `<svg class="button-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>`
             };
 
             const targetTypes = {
@@ -618,12 +708,30 @@
             };
 
             function setupControls() {
+                const container = document.getElementById('target-buttons-container');
                 Object.keys(targetTypes).forEach(type => {
-                    const btn = document.getElementById(`${type}-btn`);
                     const targetInfo = targetTypes[type];
-                    btn.innerHTML = `<div class="button-icon"><img src="${targetInfo.iconUrl}" alt="${targetInfo.name}"></div><span>${targetInfo.name}</span>`;
-                    btn.addEventListener('click', () => setActiveMode('adding', type));
-                    ui.buttons[type] = btn;
+                    const group = document.createElement('div');
+                    group.className = 'target-button-group';
+
+                    const mainBtn = document.createElement('button');
+                    mainBtn.id = `${type}-btn`;
+                    mainBtn.className = 'main-btn';
+                    mainBtn.title = `Select ${targetInfo.name} target`;
+                    mainBtn.innerHTML = `<div class="button-icon"><img src="${targetInfo.iconUrl}" alt="${targetInfo.name}"></div><span>${targetInfo.name}</span>`;
+                    mainBtn.addEventListener('click', () => setActiveMode('adding', type));
+
+                    const bulkAddBtn = document.createElement('button');
+                    bulkAddBtn.className = 'bulk-add-btn';
+                    bulkAddBtn.title = `Bulk add ${targetInfo.name}s via coordinates`;
+                    bulkAddBtn.innerHTML = uiIcons.bulk;
+                    bulkAddBtn.addEventListener('click', () => openCoordinateModal(type));
+
+                    group.appendChild(mainBtn);
+                    group.appendChild(bulkAddBtn);
+                    container.appendChild(group);
+
+                    ui.buttons[type] = mainBtn;
                 });
 
                 ui.buttons.analyze = document.getElementById('analyze-btn');
@@ -638,6 +746,8 @@
                 document.getElementById('clear-btn').innerHTML = `${uiIcons.clear}<span>Clear All</span>`;
                 document.getElementById('save-btn').innerHTML = `${uiIcons.save}<span>Save as Image</span>`;
                 document.getElementById('controls-close-btn').innerHTML = uiIcons.close;
+                document.getElementById('modal-close-btn').innerHTML = uiIcons.close;
+
 
                 document.getElementById('clear-btn').addEventListener('click', clearAll);
                 document.getElementById('save-btn').addEventListener('click', saveMapAsImage);
@@ -647,30 +757,25 @@
                 ui.buttons.redo.addEventListener('click', redo);
 
                 document.addEventListener('keydown', (e) => {
-                    if (e.target.isContentEditable) return;
+                    if (e.target.isContentEditable || ui.modal.classList.contains('visible')) return;
                     if (e.key === "Escape") setActiveMode(null);
                     if (e.ctrlKey && e.key === 'z') undo();
                     if (e.ctrlKey && e.key === 'y') redo();
                 });
 
-                ui.mapTitle.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
-                });
-
+                ui.mapTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
                 ui.mapTitle.addEventListener('blur', saveState);
                 map.on('moveend zoomend', saveState);
 
                 setupPanelToggles();
+                setupModal();
             }
 
             function saveState() {
                 if (isRestoringState) return;
                 const state = {
                     targets: activeTargets.map(serializeTarget),
-                    view: {
-                        center: map.getCenter(),
-                        zoom: map.getZoom()
-                    },
+                    view: { center: map.getCenter(), zoom: map.getZoom() },
                     title: ui.mapTitle.textContent.trim()
                 };
                 localStorage.setItem('mapState', JSON.stringify(state));
@@ -678,33 +783,20 @@
 
             function loadState() {
                 const savedStateJSON = localStorage.getItem('mapState');
-                if (!savedStateJSON) {
-                    updateHistoryButtons();
-                    updateStatsHeader();
-                    return;
-                }
-
+                if (!savedStateJSON) { updateHistoryButtons(); updateStatsHeader(); return; }
                 try {
                     isRestoringState = true;
                     const savedState = JSON.parse(savedStateJSON);
-
                     if (savedState.targets) {
                         savedState.targets.forEach(targetData => {
                             const latlng = L.latLng(targetData.latlng.lat, targetData.latlng.lng);
                             const trailPoints = targetData.trailPoints.map(p => L.latLng(p.lat, p.lng));
                             const target = createTarget(targetData.id, targetData.type, latlng, targetData.rotation, trailPoints);
-                            if (targetData.pendingDeletion) {
-                                setPendingDeletionState(target, true);
-                            }
+                            if (targetData.pendingDeletion) { setPendingDeletionState(target, true); }
                         });
                     }
-
-                    if (savedState.view) {
-                        map.setView(savedState.view.center, savedState.view.zoom);
-                    }
-
+                    if (savedState.view) { map.setView(savedState.view.center, savedState.view.zoom); }
                     ui.mapTitle.textContent = savedState.title || 'AirDefense ✈️';
-
                 } catch (error) {
                     console.error("Failed to load state from localStorage:", error);
                     localStorage.removeItem('mapState');
@@ -715,22 +807,25 @@
                 }
             }
 
+            function cancelMassPlacement() {
+                tempMarkersGroup.forEach(m => map.removeLayer(m));
+                tempMarkersGroup = [];
+                map.off('mousemove', rotateMultipleTempMarkers);
+                ui.map.classList.remove('adding-multiple');
+            }
+
             function setActiveMode(mode, type = null) {
                 const isTogglingOff = (activeState.mode === mode && activeState.type === type);
 
                 Object.values(ui.buttons).forEach(btn => btn?.classList.remove('active'));
-                ui.map.classList.remove('adding-target', 'delete-target');
-
-                if (circleDrawer && circleDrawer._enabled) {
-                    circleDrawer.disable();
-                }
+                ui.map.classList.remove('adding-target', 'delete-target', 'adding-multiple');
+                if (circleDrawer && circleDrawer._enabled) { circleDrawer.disable(); }
                 ui.buttons.analyze.disabled = false;
 
-                if (tempMarker) {
-                    map.removeLayer(tempMarker);
-                    tempMarker = null;
-                }
+                if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
                 map.off('mousemove', rotateTempMarker);
+                cancelMassPlacement(); // Cancel any pending mass placement
+
                 if (isTogglingOff) {
                     if (mode === 'analyze') clearAnalysis();
                     activeState = { mode: null, type: null };
@@ -764,46 +859,63 @@
 
             const rotateTempMarker = (e) => {
                 if (!tempMarker) return;
-                const p1 = map.project(tempMarker.getLatLng()),
-                    p2 = map.project(e.latlng);
+                const p1 = map.project(tempMarker.getLatLng()), p2 = map.project(e.latlng);
                 const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI + 90;
                 tempMarker.setRotationAngle(angle);
             };
 
+            const rotateMultipleTempMarkers = (e) => {
+                const p2 = map.project(e.latlng);
+                tempMarkersGroup.forEach(marker => {
+                    const p1 = map.project(marker.getLatLng());
+                    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI + 90;
+                    marker.setRotationAngle(angle);
+                });
+            };
+
             map.on('click', (e) => {
                 if (e.originalEvent.target.closest('.panel, .fab')) return;
-                if (activeState.mode !== 'adding' || !activeState.type) return;
-                if (!tempMarker) {
-                    tempMarker = L.rotatedMarker(e.latlng, { icon: createIcon(activeState.type), interactive: false }).addTo(map);
-                    map.on('mousemove', rotateTempMarker);
-                    showNotification('Move mouse to set direction, then click to confirm.');
-                } else {
-                    const finalLatLng = tempMarker.getLatLng();
-                    const finalAngle = tempMarker.options.rotationAngle;
-                    map.removeLayer(tempMarker);
-                    tempMarker = null;
-                    map.off('mousemove', rotateTempMarker);
-                    const newTarget = createTarget(Date.now(), activeState.type, finalLatLng, finalAngle, [finalLatLng]);
-                    addHistory('create', { targetId: newTarget.id, after: serializeTarget(newTarget) });
-                    showNotification(`Click to place another ${targetTypes[activeState.type].name}, or select another tool.`);
+
+                if (activeState.mode === 'adding' && activeState.type) {
+                    if (!tempMarker) {
+                        tempMarker = L.rotatedMarker(e.latlng, { icon: createIcon(activeState.type), interactive: false }).addTo(map);
+                        map.on('mousemove', rotateTempMarker);
+                        showNotification('Move mouse to set direction, then click to confirm.');
+                    } else {
+                        const finalLatLng = tempMarker.getLatLng();
+                        const finalAngle = tempMarker.options.rotationAngle;
+                        map.removeLayer(tempMarker);
+                        tempMarker = null;
+                        map.off('mousemove', rotateTempMarker);
+                        const newTarget = createTarget(Date.now(), activeState.type, finalLatLng, finalAngle, [finalLatLng]);
+                        addHistory('create', { targetId: newTarget.id, after: serializeTarget(newTarget) });
+                        showNotification(`Click to place another ${targetTypes[activeState.type].name}, or select another tool.`);
+                    }
+                } else if (activeState.mode === 'adding-multiple' && activeState.type) {
+                    map.off('mousemove', rotateMultipleTempMarkers);
+                    const targetsData = tempMarkersGroup.map(marker => {
+                        const newTarget = createTarget(Date.now() + Math.random(), activeState.type, marker.getLatLng(), marker.options.rotationAngle, [marker.getLatLng()]);
+                        return serializeTarget(newTarget);
+                    });
+
+                    addHistory('create-multiple', { targets: targetsData });
+
+                    tempMarkersGroup.forEach(m => map.removeLayer(m));
+                    tempMarkersGroup = [];
+                    showNotification(`${targetsData.length} targets placed.`, 2500);
+                    setActiveMode(null);
                 }
             });
 
             function createTarget(id, type, latlng, rotation, trailPoints) {
                 const targetColor = targetTypes[type].color;
                 const marker = L.rotatedMarker(latlng, { icon: createIcon(type), draggable: true, rotationAngle: rotation }).addTo(map);
-
                 const trail = L.gradientPolyline(trailPoints, { color: targetColor, weight: 5 }).addTo(map);
-
                 const target = { id, type, marker, trailPoints: [...trailPoints], rotation, trail, pendingDeletion: false };
                 addMarkerListeners(target);
                 activeTargets.push(target);
                 updateTrail(target);
-
-                if (!isRestoringState) {
-                    updateAllStats();
-                    saveState();
-                }
+                if (!isRestoringState) { updateAllStats(); saveState(); }
                 return target;
             }
 
@@ -811,23 +923,15 @@
                 const targetInfo = targetTypes[type];
                 const isEnlarged = type !== 'drone';
                 const html = `<div class="target-icon-wrapper"><img src="${targetInfo.iconUrl}" class="target-icon-svg ${isEnlarged ? 'enlarged' : ''}" alt="${targetInfo.name}"></div>`;
-                return L.divIcon({
-                    className: 'leaflet-div-icon',
-                    html: html,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15]
-                });
+                return L.divIcon({ className: 'leaflet-div-icon', html: html, iconSize: [30, 30], iconAnchor: [15, 15] });
             }
 
             function addMarkerListeners(target) {
                 if (!target.marker.dragging) target.marker.dragging.enable();
-                let lastDragPoint = null,
-                    lastAngle = target.rotation,
-                    preMoveState = null;
+                let lastDragPoint = null, lastAngle = target.rotation, preMoveState = null;
 
                 target.marker.on('dragstart', () => {
                     if (activeState.mode !== null) setActiveMode(null);
-
                     if (target.pendingDeletion) {
                         const beforeState = serializeTarget(target);
                         setPendingDeletionState(target, false);
@@ -876,105 +980,41 @@
                 target.pendingDeletion = isPending;
                 target.marker._icon.classList.toggle('pending-deletion', isPending);
                 target.trail.getElement()?.classList.toggle('pending-deletion', isPending);
-                if (!isRestoringState) {
-                    updateAllStats();
-                    saveState();
-                }
+                if (!isRestoringState) { updateAllStats(); saveState(); }
             }
 
             function deleteTarget(targetId) {
                 const targetIndex = activeTargets.findIndex(t => t.id === targetId);
                 if (targetIndex > -1) {
                     const target = activeTargets[targetIndex];
-                    map.removeLayer(target.marker);
-                    map.removeLayer(target.trail);
+                    map.removeLayer(target.marker); map.removeLayer(target.trail);
                     activeTargets.splice(targetIndex, 1);
-                    if (!isRestoringState) {
-                        updateAllStats();
-                        saveState();
-                    }
+                    if (!isRestoringState) { updateAllStats(); saveState(); }
                 }
             }
 
-            function updateTrail(target) {
-                target.trail.setLatLngs(target.trailPoints);
-            }
-
-            function clearAnalysis() {
-                if (analysisCircle) {
-                    map.removeLayer(analysisCircle);
-                    analysisCircle = null;
-                }
-                ui.buttons.analyze.classList.remove('active');
-                ui.statsContainer.classList.remove('analysis-active');
-                updateStatsHeader();
-            }
-
-            map.on(L.Draw.Event.CREATED, (event) => {
-                if (activeState.mode !== 'analyze') return;
-                clearAnalysis();
-                analysisCircle = event.layer;
-                map.addLayer(analysisCircle);
-                analyzeArea(analysisCircle);
-                ui.buttons.analyze.disabled = false;
-                hideNotification();
-            });
-
-            map.on('draw:drawstop', () => {
-                if (activeState.mode === 'analyze' && !analysisCircle) {
-                    setActiveMode(null);
-                }
-            });
-
-
-            function getVisibleTargets() {
-                return activeTargets.filter(t => !t.pendingDeletion);
-            }
-
-            function updateAllStats() {
-                if (analysisCircle) {
-                    analyzeArea(analysisCircle);
-                } else {
-                    updateStatsHeader();
-                }
-            }
+            function updateTrail(target) { target.trail.setLatLngs(target.trailPoints); }
+            function clearAnalysis() { if (analysisCircle) { map.removeLayer(analysisCircle); analysisCircle = null; } ui.buttons.analyze.classList.remove('active'); ui.statsContainer.classList.remove('analysis-active'); updateStatsHeader(); }
+            map.on(L.Draw.Event.CREATED, (event) => { if (activeState.mode !== 'analyze') return; clearAnalysis(); analysisCircle = event.layer; map.addLayer(analysisCircle); analyzeArea(analysisCircle); ui.buttons.analyze.disabled = false; hideNotification(); });
+            map.on('draw:drawstop', () => { if (activeState.mode === 'analyze' && !analysisCircle) { setActiveMode(null); } });
+            function getVisibleTargets() { return activeTargets.filter(t => !t.pendingDeletion); }
+            function updateAllStats() { if (analysisCircle) { analyzeArea(analysisCircle); } else { updateStatsHeader(); } }
 
             function updateStatsHeader() {
                 const visibleTargets = getVisibleTargets();
                 const counts = visibleTargets.reduce((acc, t) => ({ ...acc, [t.type]: (acc[t.type] || 0) + 1 }), {});
                 let statsHtml = `<span class="stat-item">Total:&nbsp;<strong>${visibleTargets.length}</strong></span>`;
-
-                Object.keys(targetTypes).forEach(type => {
-                    if (counts[type] > 0) {
-                        statsHtml += `<span class="stat-item"><img src="${targetTypes[type].iconUrl}"> ${counts[type]}</span>`;
-                    }
-                });
+                Object.keys(targetTypes).forEach(type => { if (counts[type] > 0) { statsHtml += `<span class="stat-item"><img src="${targetTypes[type].iconUrl}"> ${counts[type]}</span>`; } });
                 ui.statsContainer.innerHTML = statsHtml;
             }
 
             function analyzeArea(circle) {
-                const center = circle.getLatLng(),
-                    radius = circle.getRadius(),
-                    counts = {};
+                const center = circle.getLatLng(), radius = circle.getRadius(), counts = {};
                 let totalInArea = 0;
-                getVisibleTargets().forEach(t => {
-                    if (center.distanceTo(t.marker.getLatLng()) <= radius) {
-                        counts[t.type] = (counts[t.type] || 0) + 1;
-                        totalInArea++;
-                    }
-                });
-
+                getVisibleTargets().forEach(t => { if (center.distanceTo(t.marker.getLatLng()) <= radius) { counts[t.type] = (counts[t.type] || 0) + 1; totalInArea++; } });
                 let statsHtml = `<span class="stat-item">Total:&nbsp;<strong>${totalInArea}</strong></span>`;
-                if (Object.keys(counts).length > 0) {
-                    Object.keys(targetTypes).forEach(type => {
-                        if (counts[type] > 0) {
-                            statsHtml += `<span class="stat-item"><img src="${targetTypes[type].iconUrl}"> ${counts[type]}</span>`;
-                        }
-                    });
-                } else {
-                    statsHtml += `<span class="stat-item" style="color: var(--text-color-muted);"><i>No targets in area</i></span>`;
-                }
-
+                if (Object.keys(counts).length > 0) { Object.keys(targetTypes).forEach(type => { if (counts[type] > 0) { statsHtml += `<span class="stat-item"><img src="${targetTypes[type].iconUrl}"> ${counts[type]}</span>`; } }); }
+                else { statsHtml += `<span class="stat-item" style="color: var(--text-color-muted);"><i>No targets in area</i></span>`; }
                 ui.statsContainer.innerHTML = statsHtml;
                 ui.statsContainer.classList.add('analysis-active');
             }
@@ -982,26 +1022,15 @@
 
             function clearAll() {
                 if (!confirm("Are you sure you want to clear the entire scene? This action cannot be undone.")) return;
-
-                setActiveMode(null);
-                clearAnalysis();
-                activeTargets.forEach(t => {
-                    map.removeLayer(t.marker);
-                    map.removeLayer(t.trail);
-                });
+                setActiveMode(null); clearAnalysis();
+                activeTargets.forEach(t => { map.removeLayer(t.marker); map.removeLayer(t.trail); });
                 activeTargets = [], undoStack = [], redoStack = [];
-                updateAllStats();
-                updateHistoryButtons();
+                updateAllStats(); updateHistoryButtons();
                 localStorage.removeItem('mapState');
                 showNotification("Scene cleared.", 2000);
             }
 
-            function addHistory(action, data) {
-                if (isRestoringState) return;
-                undoStack.push({ action, data });
-                redoStack = [];
-                updateHistoryButtons();
-            }
+            function addHistory(action, data) { if (isRestoringState) return; undoStack.push({ action, data }); redoStack = []; updateHistoryButtons(); }
 
             function applyTargetState(target, stateData) {
                 const latlng = L.latLng(stateData.latlng.lat, stateData.latlng.lng);
@@ -1014,30 +1043,27 @@
                 setPendingDeletionState(target, stateData.pendingDeletion);
             }
 
-
             function undo() {
                 if (undoStack.length === 0) return;
                 const lastAction = undoStack.pop();
                 redoStack.push(lastAction);
                 isRestoringState = true;
 
-                const target = activeTargets.find(t => t.id === lastAction.data.targetId);
-
                 if (lastAction.action === 'create') {
                     deleteTarget(lastAction.data.targetId);
+                } else if (lastAction.action === 'create-multiple') {
+                    lastAction.data.targets.forEach(targetData => deleteTarget(targetData.id));
                 } else if (lastAction.action === 'delete') {
                     const d = lastAction.data.before;
-                    createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
-                    const newTarget = activeTargets.find(t => t.id === d.id);
+                    const newTarget = createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
                     setPendingDeletionState(newTarget, true);
                 } else if (lastAction.action === 'move' || lastAction.action === 'update') {
+                    const target = activeTargets.find(t => t.id === lastAction.data.targetId);
                     if (target) applyTargetState(target, lastAction.data.before);
                 }
 
                 isRestoringState = false;
-                updateHistoryButtons();
-                updateAllStats();
-                saveState();
+                updateHistoryButtons(); updateAllStats(); saveState();
             }
 
             function redo() {
@@ -1046,54 +1072,34 @@
                 undoStack.push(nextAction);
                 isRestoringState = true;
 
-                const target = activeTargets.find(t => t.id === nextAction.data.targetId);
-
                 if (nextAction.action === 'create') {
                     const d = nextAction.data.after;
                     createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
+                } else if (nextAction.action === 'create-multiple') {
+                    nextAction.data.targets.forEach(d => {
+                        createTarget(d.id, d.type, d.latlng, d.rotation, d.trailPoints.map(p => L.latLng(p.lat, p.lng)));
+                    });
                 } else if (nextAction.action === 'delete') {
                     deleteTarget(nextAction.data.targetId);
                 } else if (nextAction.action === 'move' || nextAction.action === 'update') {
+                    const target = activeTargets.find(t => t.id === nextAction.data.targetId);
                     if (target) applyTargetState(target, nextAction.data.after);
                 }
 
                 isRestoringState = false;
-                updateHistoryButtons();
-                updateAllStats();
-                saveState();
+                updateHistoryButtons(); updateAllStats(); saveState();
             }
 
-            function updateHistoryButtons() {
-                ui.buttons.undo.disabled = undoStack.length === 0;
-                ui.buttons.redo.disabled = redoStack.length === 0;
-            }
-
-            function serializeTarget(target) {
-                return {
-                    id: target.id,
-                    type: target.type,
-                    latlng: target.marker.getLatLng(),
-                    rotation: target.rotation,
-                    trailPoints: target.trailPoints.map(p => ({ lat: p.lat, lng: p.lng })),
-                    pendingDeletion: target.pendingDeletion
-                };
-            }
+            function updateHistoryButtons() { ui.buttons.undo.disabled = undoStack.length === 0; ui.buttons.redo.disabled = redoStack.length === 0; }
+            function serializeTarget(target) { return { id: target.id, type: target.type, latlng: target.marker.getLatLng(), rotation: target.rotation, trailPoints: target.trailPoints.map(p => ({ lat: p.lat, lng: p.lng })), pendingDeletion: target.pendingDeletion }; }
 
             function saveMapAsImage() {
                 document.body.classList.add('saving-map');
                 if (document.activeElement) document.activeElement.blur();
-
                 const headerWasHidden = ui.statsHeaderPanel.classList.contains('is-hidden');
                 if (headerWasHidden) ui.statsHeaderPanel.classList.remove('is-hidden');
-
                 setTimeout(() => {
-                    html2canvas(document.getElementById("capture-wrapper"), {
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#0d0d1a',
-                        logging: false,
-                        ignoreElements: (element) => element.id === 'notification'
-                    }).then(canvas => {
+                    html2canvas(document.getElementById("capture-wrapper"), { useCORS: true, allowTaint: true, backgroundColor: '#0d0d1a', logging: false, ignoreElements: (element) => element.id === 'notification' }).then(canvas => {
                         const link = document.createElement('a');
                         const safeTitle = ui.mapTitle.textContent.trim().replace(/[^a-z0-9]/gi, '_').toLowerCase();
                         link.download = `${safeTitle || 'map'}_${new Date().toISOString().slice(0, 10)}.png`;
@@ -1101,23 +1107,13 @@
                         link.click();
                         showNotification("Image saved!", 2000);
                     }).catch(err => {
-                        showNotification("Error saving image.", 3000);
-                        console.error("html2canvas error:", err);
-                    }).finally(() => {
-                        document.body.classList.remove('saving-map');
-                        if (headerWasHidden) ui.statsHeaderPanel.classList.add('is-hidden');
-                    });
+                        showNotification("Error saving image.", 3000); console.error("html2canvas error:", err);
+                    }).finally(() => { document.body.classList.remove('saving-map'); if (headerWasHidden) ui.statsHeaderPanel.classList.add('is-hidden'); });
                 }, 500);
             }
 
             let notificationTimeout;
-
-            function showNotification(message, duration = 3000) {
-                ui.notification.textContent = message;
-                ui.notification.classList.add('visible');
-                if (notificationTimeout) clearTimeout(notificationTimeout);
-                if (duration > 0) notificationTimeout = setTimeout(hideNotification, duration);
-            }
+            function showNotification(message, duration = 3000) { ui.notification.textContent = message; ui.notification.classList.add('visible'); if (notificationTimeout) clearTimeout(notificationTimeout); if (duration > 0) notificationTimeout = setTimeout(hideNotification, duration); }
             const hideNotification = () => ui.notification.classList.remove('visible');
 
             function setupPanelToggles() {
@@ -1125,47 +1121,114 @@
                 const controlsToggleBtn = document.getElementById('controls-toggle-btn');
                 const controlsCloseBtn = document.getElementById('controls-close-btn');
                 const isMobile = window.matchMedia("(max-width: 768px)").matches;
-
-                const toggleControlPanel = (show) => {
-                    const shouldBeHidden = show === false || !ui.controlPanel.classList.contains('is-hidden');
-                    ui.controlPanel.classList.toggle('is-hidden', shouldBeHidden);
-                    controlsToggleBtn.style.display = shouldBeHidden ? 'flex' : 'none';
-                };
-
-                const toggleHeaderPanel = () => {
-                    const shouldBeHidden = !ui.statsHeaderPanel.classList.contains('is-hidden');
-                    ui.statsHeaderPanel.classList.toggle('is-hidden', shouldBeHidden);
-                    headerToggleBtn.classList.toggle('active', !shouldBehidden);
-                };
-
+                const toggleControlPanel = (show) => { const shouldBeHidden = show === false || !ui.controlPanel.classList.contains('is-hidden'); ui.controlPanel.classList.toggle('is-hidden', shouldBeHidden); controlsToggleBtn.style.display = shouldBeHidden ? 'flex' : 'none'; };
+                const toggleHeaderPanel = () => { const shouldBeHidden = !ui.statsHeaderPanel.classList.contains('is-hidden'); ui.statsHeaderPanel.classList.toggle('is-hidden', shouldBeHidden); headerToggleBtn.classList.toggle('active', !shouldBeHidden); };
                 headerToggleBtn.addEventListener('click', toggleHeaderPanel);
                 controlsToggleBtn.addEventListener('click', () => toggleControlPanel(true));
                 controlsCloseBtn.addEventListener('click', () => toggleControlPanel(false));
+                if (isMobile) { ui.controlPanel.classList.add('is-hidden'); controlsToggleBtn.style.display = 'flex'; }
+                else { ui.controlPanel.classList.remove('is-hidden'); controlsToggleBtn.style.display = 'none'; }
+            }
 
-                if (isMobile) {
-                    ui.controlPanel.classList.add('is-hidden');
-                    controlsToggleBtn.style.display = 'flex';
-                } else {
-                    ui.controlPanel.classList.remove('is-hidden');
-                    controlsToggleBtn.style.display = 'none';
+            // --- NEW MODAL AND BULK ADD LOGIC ---
+            function setupModal() {
+                const modal = ui.modal;
+                const closeBtn = document.getElementById('modal-close-btn');
+                const submitBtn = document.getElementById('modal-submit-btn');
+                const submitBtnSpan = submitBtn.querySelector('span');
+
+                const updateCoordinateCount = () => {
+                    const text = ui.modalTextarea.value;
+                    const coordinates = parseCoordinatesFromText(text);
+                    const count = coordinates.length;
+
+                    if (count > 0) {
+                        submitBtnSpan.textContent = `Place ${count} Targets`;
+                        submitBtn.title = `Add ${count} targets to the map`;
+                        submitBtn.disabled = false;
+                    } else {
+                        submitBtnSpan.textContent = 'Place Targets';
+                        submitBtn.title = 'No valid coordinates found';
+                        submitBtn.disabled = true;
+                    }
+                };
+
+                ui.modalTextarea.addEventListener('input', updateCoordinateCount);
+
+                closeBtn.addEventListener('click', closeCoordinateModal);
+                modal.addEventListener('click', (e) => { if (e.target === modal) closeCoordinateModal(); });
+
+                submitBtn.addEventListener('click', () => {
+                    const text = ui.modalTextarea.value;
+                    const type = modal.dataset.type;
+                    const coordinates = parseCoordinatesFromText(text);
+
+                    if (coordinates.length === 0) {
+                        showNotification("No valid coordinates found.", 3000);
+                        return;
+                    }
+
+                    closeCoordinateModal();
+                    startMassPlacement(coordinates, type);
+                });
+
+                // Attach the update function to the modal UI object to call it from outside
+                ui.modal.updateCount = updateCoordinateCount;
+            }
+
+            function openCoordinateModal(type) {
+                setActiveMode(null); // Deactivate any other mode
+                ui.modal.dataset.type = type;
+                ui.modalTextarea.value = '';
+                ui.modal.classList.add('visible');
+                ui.modal.updateCount(); // Set initial button state
+                setTimeout(() => ui.modalTextarea.focus(), 300); // For transition
+            }
+
+            function closeCoordinateModal() {
+                ui.modal.classList.remove('visible');
+            }
+
+            function parseCoordinatesFromText(text) {
+                const regex = /\[\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*\]/g;
+                const coords = [];
+                let match;
+                while ((match = regex.exec(text)) !== null) {
+                    const lat = parseFloat(match[1]);
+                    const lng = parseFloat(match[2]);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        coords.push(L.latLng(lat, lng));
+                    }
                 }
+                return coords;
+            }
+
+            function startMassPlacement(latlngs, type) {
+                setActiveMode('adding-multiple', type);
+                cancelMassPlacement(); // Clear any previous temp markers
+
+                latlngs.forEach(latlng => {
+                    const marker = L.rotatedMarker(latlng, { icon: createIcon(type), interactive: false }).addTo(map);
+                    tempMarkersGroup.push(marker);
+                });
+
+                map.on('mousemove', rotateMultipleTempMarkers);
+                showNotification(`Move mouse to set direction for ${tempMarkersGroup.length} targets, then click to confirm.`);
             }
 
             function updateDateTime() {
                 const now = new Date();
                 const day = String(now.getDate()).padStart(2, '0');
-                const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+                const month = String(now.getMonth() + 1).padStart(2, '0');
                 const year = now.getFullYear();
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
-
                 ui.mapDate.textContent = `${day}.${month}.${year} ${hours}:${minutes}`;
             }
 
             setupControls();
             loadState();
-
-            updateDateTime(); // Set the time immediately on load
+            updateDateTime();
             setInterval(updateDateTime, 60000);
         });
     </script>
