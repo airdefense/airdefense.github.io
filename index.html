@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision Interactive Map v19 (Enhanced)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        :root {
+            --panel-bg: rgba(28, 29, 41, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-color: #e0e0e0;
+            --text-color-muted: #9e9e9e;
+            --highlight-blue: #0d8eff;
+            --highlight-red: #ff453a;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --panel-border-radius: 12px;
+            --button-border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: var(--font-family);
+            background-color: #0d0d1a;
+            color: var(--text-color);
+        }
+
+        #capture-wrapper {
+            width: 100%;
+            height: 100%;
+            background-color: #0d0d1a;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #map.adding-target {
+            cursor: crosshair;
+        }
+
+        #map.delete-target .leaflet-marker-icon {
+            cursor: pointer;
+        }
+
+        .leaflet-marker-icon,
+        .trail-path {
+            transition: opacity 0.3s ease;
+        }
+
+        .pending-deletion {
+            opacity: 0.2 !important;
+        }
+
+        body.saving-map {
+            cursor: wait !important;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(18px) saturate(180%);
+            border-radius: var(--panel-border-radius);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed) ease;
+        }
+
+        #app-title {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            padding: 8px 18px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: opacity var(--transition-speed);
+            cursor: text;
+        }
+
+        #app-title:focus {
+            outline: 1px solid var(--highlight-blue);
+        }
+
+        #left-panels-container {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+            width: 280px;
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed) ease;
+        }
+
+        #left-panels-container.is-hidden {
+            transform: translateY(calc(100% + 20px));
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .control-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 250px;
+            z-index: 1000;
+            padding: 15px;
+        }
+
+        .control-panel.is-hidden {
+            transform: translateX(calc(100% + 20px));
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .results-panel,
+        .global-stats-panel {
+            width: 100%;
+            padding: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed) ease;
+        }
+
+        .results-panel.visible,
+        .global-stats-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            user-select: none;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .panel-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color-muted);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: all 0.2s ease;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .panel-close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            transform: rotate(90deg);
+        }
+
+        .panel-close-btn .button-icon {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2.5;
+        }
+
+        .panel button:not(.panel-close-btn) {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--button-border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .panel button:not(.panel-close-btn):hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .panel button:not(.panel-close-btn):active {
+            transform: scale(0.98);
+        }
+
+        .panel button.active {
+            background: var(--highlight-blue);
+            border-color: #3b9fff;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(13, 142, 255, 0.5);
+        }
+
+        .panel button.delete.active {
+            background: var(--highlight-red);
+            border-color: #ff5c5c;
+            box-shadow: 0 0 10px rgba(255, 59, 48, 0.5);
+        }
+
+        .panel button:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: #888;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .stats-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .stats-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 15px;
+            padding: 6px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .stats-list li:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-list .result-icon-wrapper {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .stats-list .result-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stats-list .no-results {
+            color: var(--text-color-muted);
+            font-style: italic;
+            padding: 10px 0;
+        }
+
+        .stats-list .stats-total {
+            font-size: 16px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            color: #fff;
+            display: block;
+        }
+
+        .leaflet-div-icon {
+            background: none !important;
+            border: none !important;
+        }
+
+        .button-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .button-icon img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .target-icon-wrapper {
+            width: 30px;
+            height: 30px;
+            filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.8));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .target-icon-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .target-icon-svg.enlarged {
+            transform: scale(1.3);
+        }
+
+        .trail-path {
+            fill: none;
+            stroke-width: 4px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .trail-glow {
+            filter: url(#trail-glow-filter);
+        }
+
+        #notification {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translate(-50%, -10px);
+            background: var(--panel-bg);
+            color: #fff;
+            padding: 10px 25px;
+            border-radius: var(--button-border-radius);
+            z-index: 2000;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #notification.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, 0);
+        }
+
+        hr.separator {
+            border: none;
+            height: 1px;
+            background: var(--border-color);
+            margin: 15px 0;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .fab {
+            position: absolute;
+            z-index: 1001;
+            width: 48px;
+            height: 48px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease, opacity 0.3s ease, background-color 0.2s ease;
+        }
+
+        .fab:hover {
+            transform: scale(1.08);
+            background-color: rgba(40, 42, 58, 0.9);
+        }
+
+        .fab svg {
+            stroke: var(--text-color);
+            stroke-width: 2;
+            stroke-linecap: round;
+            fill: none;
+            transition: transform 0.3s ease;
+        }
+
+        .fab.active svg.icon-open {
+            transform: rotate(45deg);
+        }
+
+        #controls-toggle-btn {
+            top: 15px;
+            right: 15px;
+        }
+
+        #info-toggle-btn {
+            bottom: 15px;
+            left: 15px;
+        }
+
+        @media (max-width: 768px) {
+            #app-title {
+                display: none;
+            }
+
+            .control-panel {
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: min(280px, 85vw);
+                border-radius: 0;
+                padding-top: 60px;
+                border-left: 1px solid var(--border-color);
+                border-right: none;
+                border-top: none;
+                border-bottom: none;
+                overflow-y: auto;
+            }
+
+            .control-panel.is-hidden {
+                transform: translateX(100%);
+            }
+
+            #left-panels-container {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+                width: auto;
+                max-height: 40vh;
+                overflow-y: auto;
+            }
+
+            #info-toggle-btn {
+                left: 10px;
+                bottom: 10px;
+            }
+
+            #controls-toggle-btn {
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        body.saving-map .fab,
+        body.saving-map .leaflet-control-container,
+        body.saving-map .panel:not(#app-title) {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.2s ease !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="capture-wrapper">
+        <div id="map"></div>
+        <div id="app-title" class="panel" contenteditable="true" title="Click to edit title">Precision Interactive Map
+        </div>
+
+        <div id="left-panels-container" class="">
+            <div id="global-stats-panel" class="panel global-stats-panel">
+                <div class="panel-header">
+                    <h3>Global Statistics</h3>
+                    <button id="global-stats-close-btn" class="panel-close-btn" title="Hide Statistics"></button>
+                </div>
+                <ul id="global-stats-list" class="stats-list"></ul>
+            </div>
+            <div id="results-panel" class="panel results-panel">
+                <div class="panel-header">
+                    <h3>Analysis Results</h3>
+                    <button id="results-close-btn" class="panel-close-btn" title="Clear Analysis"></button>
+                </div>
+                <ul id="results-list" class="stats-list"></ul>
+            </div>
+        </div>
+
+        <div class="control-panel panel">
+            <div class="panel-header">
+                <h3>Tools</h3>
+                <button id="controls-close-btn" class="panel-close-btn" title="Hide Tools"></button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-color-muted); margin-top: -10px; margin-bottom: 15px;">Add
+                Target</p>
+            <button id="drone-btn" title="Select Drone target"></button>
+            <button id="rocket-btn" title="Select Rocket target"></button>
+            <button id="ballistics-btn" title="Select Ballistics target"></button>
+            <button id="aeroballistics-btn" title="Select Aeroballistics target"></button>
+            <button id="other-btn" title="Select Other target"></button>
+            <hr class="separator">
+            <button id="analyze-btn" title="Draw a circle to count targets"></button>
+            <button id="delete-btn" class="delete" title="Click on a target to delete it"></button>
+            <hr class="separator">
+            <div class="history-controls">
+                <button id="undo-btn" title="Undo (Ctrl+Z)"></button>
+                <button id="redo-btn" title="Redo (Ctrl+Y)"></button>
+            </div>
+            <button id="clear-btn" title="Remove all targets and analysis"></button>
+            <button id="save-btn" title="Save map as a PNG image"></button>
+        </div>
+        <div id="notification"></div>
+    </div>
+
+    <button id="controls-toggle-btn" class="fab" title="Toggle Tools Panel">
+        <svg class="icon-open" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" fill="none">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <button id="info-toggle-btn" class="fab active" title="Toggle Info Panels">
+        <svg class="icon-open" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" fill="none">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+    </button>
+
+    <svg width="0" height="0" style="position:absolute;">
+        <defs>
+            <filter id="trail-glow-filter">
+                <feGaussianBlur stdDeviation="4.5" result="coloredBlur" />
+                <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        ! function () { "use strict"; L.RotatedMarker = L.Marker.extend({ options: { rotationAngle: 0, rotationOrigin: "center" }, _setPos: function (t) { L.Marker.prototype._setPos.call(this, t), this.options.rotationAngle && (this._icon.style[L.DomUtil.TRANSFORM + ("rotation" in this._icon.style ? "" : "Origin")] = this.options.rotationOrigin, this._icon.style[L.DomUtil.TRANSFORM] += " rotate(" + this.options.rotationAngle + "deg)") }, setRotationAngle: function (t) { this.options.rotationAngle = t, this.update(), this.fire("rotate", { angle: t }) }, setRotationOrigin: function (t) { this.options.rotationOrigin = t, this.update() } }), L.rotatedMarker = function (t, i) { return new L.RotatedMarker(t, i) } }();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const map = L.map('map', { center: [50.4501, 30.5234], zoom: 7, zoomControl: false, preferCanvas: true });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            const svgOverlay = L.svg();
+            svgOverlay.addTo(map);
+            const svgEl = svgOverlay._container;
+            const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            svgEl.prepend(defs);
+
+            let activeState = { type: null, mode: null };
+            let tempMarker = null,
+                activeTargets = [],
+                analysisCircle = null,
+                circleDrawer;
+            let undoStack = [],
+                redoStack = [];
+            let isRestoringState = false;
+
+            const ui = {
+                map: document.getElementById('map'),
+                appTitle: document.getElementById('app-title'),
+                controlPanel: document.querySelector('.control-panel'),
+                leftPanels: document.getElementById('left-panels-container'),
+                resultsPanel: document.getElementById('results-panel'),
+                globalStatsPanel: document.getElementById('global-stats-panel'),
+                notification: document.getElementById('notification'),
+                buttons: {}
+            };
+
+            const uiIcons = {
+                'analyze': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+                'delete': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+                'undo': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`,
+                'redo': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>`,
+                'clear': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+                'save': `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
+                'close': `<svg class="button-icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+            };
+
+            const targetTypes = {
+                'drone': { color: 'yellow', name: 'Drone', iconUrl: 'targets/drone.svg' },
+                'rocket': { color: 'red', name: 'Rocket', iconUrl: 'targets/rocket.svg' },
+                'ballistics': { color: 'limegreen', name: 'Ballistics', iconUrl: 'targets/bal.svg' },
+                'aeroballistics': { color: 'cyan', name: 'Aeroballistics', iconUrl: 'targets/aero.svg' },
+                'other': { color: 'grey', name: 'Other', iconUrl: 'targets/other.svg' }
+            };
+
+            function setupControls() {
+                Object.keys(targetTypes).forEach(type => {
+                    const btn = document.getElementById(`${type}-btn`);
+                    const targetInfo = targetTypes[type];
+                    btn.innerHTML = `<div class="button-icon"><img src="${targetInfo.iconUrl}" alt="${targetInfo.name}"></div><span>${targetInfo.name}</span>`;
+                    btn.addEventListener('click', () => setActiveMode('adding', type));
+                    ui.buttons[type] = btn;
+                });
+
+                ui.buttons.analyze = document.getElementById('analyze-btn');
+                ui.buttons.delete = document.getElementById('delete-btn');
+                ui.buttons.undo = document.getElementById('undo-btn');
+                ui.buttons.redo = document.getElementById('redo-btn');
+
+                ui.buttons.analyze.innerHTML = `${uiIcons.analyze}<span>Analyze Area</span>`;
+                ui.buttons.delete.innerHTML = `${uiIcons.delete}<span>Delete Target</span>`;
+                ui.buttons.undo.innerHTML = `${uiIcons.undo}<span>Undo</span>`;
+                ui.buttons.redo.innerHTML = `${uiIcons.redo}<span>Redo</span>`;
+                document.getElementById('clear-btn').innerHTML = `${uiIcons.clear}<span>Clear All</span>`;
+                document.getElementById('save-btn').innerHTML = `${uiIcons.save}<span>Save as Image</span>`;
+                document.getElementById('results-close-btn').innerHTML = uiIcons.close;
+                document.getElementById('controls-close-btn').innerHTML = uiIcons.close;
+                document.getElementById('global-stats-close-btn').innerHTML = uiIcons.close;
+
+                document.getElementById('clear-btn').addEventListener('click', clearAll);
+                document.getElementById('save-btn').addEventListener('click', saveMapAsImage);
+                ui.buttons.analyze.addEventListener('click', toggleAnalysis);
+                ui.buttons.delete.addEventListener('click', () => setActiveMode('delete'));
+                ui.buttons.undo.addEventListener('click', undo);
+                ui.buttons.redo.addEventListener('click', redo);
+                document.getElementById('results-close-btn').addEventListener('click', clearAnalysis);
+                document.getElementById('global-stats-close-btn').addEventListener('click', () => {
+                    ui.globalStatsPanel.classList.remove('visible');
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.target === ui.appTitle) return;
+                    if (e.key === "Escape") setActiveMode(null);
+                    if (e.ctrlKey && e.key === 'z') undo();
+                    if (e.ctrlKey && e.key === 'y') redo();
+                });
+
+                ui.appTitle.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+                });
+
+                ui.appTitle.addEventListener('blur', saveState);
+                map.on('moveend zoomend', saveState);
+
+                setupPanelToggles();
+            }
+
+            function saveState() {
+                if (isRestoringState) return;
+                const state = {
+                    targets: activeTargets.map(serializeTarget),
+                    view: {
+                        center: map.getCenter(),
+                        zoom: map.getZoom()
+                    },
+                    title: ui.appTitle.textContent.trim()
+                };
+                localStorage.setItem('mapState', JSON.stringify(state));
+            }
+
+            function loadState() {
+                const savedStateJSON = localStorage.getItem('mapState');
+                if (!savedStateJSON) {
+                    updateHistoryButtons();
+                    updateGlobalStats();
+                    return;
+                }
+
+                try {
+                    isRestoringState = true;
+                    const savedState = JSON.parse(savedStateJSON);
+
+                    if (savedState.targets) {
+                        savedState.targets.forEach(targetData => {
+                            const latlng = L.latLng(targetData.latlng.lat, targetData.latlng.lng);
+                            const trailPoints = targetData.trailPoints.map(p => L.latLng(p.lat, p.lng));
+                            createTarget(targetData.id, targetData.type, latlng, targetData.rotation, trailPoints);
+                        });
+                    }
+
+                    if (savedState.view) {
+                        map.setView(savedState.view.center, savedState.view.zoom);
+                    }
+
+                    ui.appTitle.textContent = savedState.title || 'Precision Interactive Map';
+
+                } catch (error) {
+                    console.error("Failed to load state from localStorage:", error);
+                    localStorage.removeItem('mapState');
+                } finally {
+                    isRestoringState = false;
+                    updateHistoryButtons();
+                    updateAllStats();
+                }
+            }
+
+            function setActiveMode(mode, type = null) {
+                const isTogglingOff = (activeState.mode === mode && activeState.type === type);
+
+                if (activeState.mode !== 'delete') {
+                    cancelAllPendingDeletions();
+                }
+
+                if (activeState.mode) {
+                    const prevButtonId = activeState.mode === 'adding' ? activeState.type : activeState.mode;
+                    ui.buttons[prevButtonId]?.classList.remove('active');
+                }
+                ui.map.classList.remove('adding-target', 'delete-target');
+                if (tempMarker) map.removeLayer(tempMarker);
+                tempMarker = null;
+                map.off('mousemove', rotateTempMarker);
+
+                if (isTogglingOff) {
+                    activeState = { mode: null, type: null };
+                    hideNotification();
+                    return;
+                }
+
+                activeState = { mode, type };
+
+                if (mode === 'adding') {
+                    ui.buttons[type].classList.add('active');
+                    ui.map.classList.add('adding-target');
+                    showNotification(`Click on the map to place a ${targetTypes[type].name}.`);
+                } else if (mode === 'delete') {
+                    ui.buttons.delete.classList.add('active');
+                    ui.map.classList.add('delete-target');
+                    showNotification('Click a target to mark for deletion. Click again to confirm.');
+                } else {
+                    hideNotification();
+                }
+            }
+
+            const rotateTempMarker = (e) => {
+                if (!tempMarker) return;
+                const p1 = map.project(tempMarker.getLatLng()),
+                    p2 = map.project(e.latlng);
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI + 90;
+                tempMarker.setRotationAngle(angle);
+            };
+
+            map.on('click', (e) => {
+                if (e.originalEvent.target.closest('.panel, .fab')) return;
+                if (activeState.mode !== 'adding' || !activeState.type) return;
+                if (!tempMarker) {
+                    tempMarker = L.rotatedMarker(e.latlng, { icon: createIcon(activeState.type), interactive: false }).addTo(map);
+                    map.on('mousemove', rotateTempMarker);
+                    showNotification('Move mouse to set direction, then click to confirm.');
+                } else {
+                    const finalLatLng = tempMarker.getLatLng();
+                    const finalAngle = tempMarker.options.rotationAngle;
+                    map.removeLayer(tempMarker);
+                    tempMarker = null;
+                    createTarget(Date.now(), activeState.type, finalLatLng, finalAngle, [finalLatLng], { action: 'create' });
+                    showNotification(`Click to place another ${targetTypes[activeState.type].name}, or select another tool.`);
+                }
+            });
+
+            function createTarget(id, type, latlng, rotation, trailPoints, historyOptions = {}) {
+                const marker = L.rotatedMarker(latlng, { icon: createIcon(type), draggable: true, rotationAngle: rotation }).addTo(map);
+                const trailG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                const trailPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const trailGlowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                trailPath.setAttribute('class', 'trail-path');
+                trailGlowPath.setAttribute('class', 'trail-path trail-glow');
+                trailG.appendChild(trailGlowPath);
+                trailG.appendChild(trailPath);
+                svgEl.appendChild(trailG);
+
+                const gradientId = `grad-${id}`;
+                const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+                gradient.setAttribute('id', gradientId);
+                gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+                gradient.innerHTML = `<stop offset="0%" stop-color="${targetTypes[type].color}" stop-opacity="0"/><stop offset="30%" stop-color="${targetTypes[type].color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${targetTypes[type].color}" stop-opacity="0.7"/>`;
+                defs.appendChild(gradient);
+                trailPath.setAttribute('stroke', `url(#${gradientId})`);
+                trailGlowPath.setAttribute('stroke', `url(#${gradientId})`);
+
+                const target = { id, type, marker, trailPoints: [...trailPoints], rotation, trailG, gradient, pendingDeletion: false };
+                addMarkerListeners(target);
+                activeTargets.push(target);
+                updateTrailSVG(target);
+
+                if (historyOptions.action) addHistory(historyOptions.action, { targetId: target.id, targetData: serializeTarget(target) });
+
+                updateAllStats();
+                saveState();
+                return target;
+            }
+
+            function createIcon(type) {
+                const targetInfo = targetTypes[type];
+                const isEnlarged = type !== 'drone';
+                const html = `<div class="target-icon-wrapper"><img src="${targetInfo.iconUrl}" class="target-icon-svg ${isEnlarged ? 'enlarged' : ''}" alt="${targetInfo.name}"></div>`;
+                return L.divIcon({
+                    className: 'leaflet-div-icon',
+                    html: html,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+            }
+
+            function addMarkerListeners(target) {
+                if (!target.marker.dragging) target.marker.dragging.enable();
+                let lastDragPoint = null,
+                    lastAngle = target.rotation,
+                    preMoveState = null;
+
+                target.marker.on('dragstart', () => {
+                    if (target.pendingDeletion) {
+                        setPendingDeletionState(target, false);
+                        showNotification('Deletion cancelled.', 2000);
+                    }
+                    if (activeState.mode === 'delete') setActiveMode(null);
+                    preMoveState = serializeTarget(target);
+                    lastDragPoint = map.project(target.marker.getLatLng());
+                });
+                target.marker.on('drag', e => {
+                    target.trailPoints.push(e.latlng);
+                    updateTrailSVG(target);
+                    const currentPoint = map.project(e.latlng);
+                    if (lastDragPoint && currentPoint.distanceTo(lastDragPoint) > 5) {
+                        const angle = Math.atan2(currentPoint.y - lastDragPoint.y, currentPoint.x - lastDragPoint.x) * 180 / Math.PI + 90;
+                        target.marker.setRotationAngle(angle);
+                        lastAngle = angle;
+                        lastDragPoint = currentPoint;
+                    } else { target.marker.setRotationAngle(lastAngle); }
+                });
+                target.marker.on('dragend', () => {
+                    target.rotation = lastAngle;
+                    addHistory('move', { targetId: target.id, before: preMoveState, after: serializeTarget(target) });
+                    if (analysisCircle) analyzeArea(analysisCircle);
+                    saveState();
+                });
+                target.marker.on('click', () => {
+                    if (activeState.mode === 'delete') {
+                        if (target.pendingDeletion) {
+                            deleteTarget(target.id, { action: 'delete' });
+                        } else {
+                            setPendingDeletionState(target, true);
+                        }
+                    }
+                });
+            }
+
+            function setPendingDeletionState(target, isPending) {
+                target.pendingDeletion = isPending;
+                target.marker._icon.classList.toggle('pending-deletion', isPending);
+                target.trailG.classList.toggle('pending-deletion', isPending);
+                updateAllStats();
+            }
+
+            function cancelAllPendingDeletions() {
+                activeTargets.forEach(target => {
+                    if (target.pendingDeletion) {
+                        setPendingDeletionState(target, false);
+                    }
+                });
+            }
+
+            function deleteTarget(targetId, historyOptions = {}) {
+                const targetIndex = activeTargets.findIndex(t => t.id === targetId);
+                if (targetIndex > -1) {
+                    const target = activeTargets[targetIndex];
+                    if (historyOptions.action) addHistory(historyOptions.action, { targetData: serializeTarget(target) });
+                    map.removeLayer(target.marker);
+                    target.trailG.remove();
+                    document.getElementById(`grad-${target.id}`)?.remove();
+                    activeTargets.splice(targetIndex, 1);
+                    updateAllStats();
+                    saveState();
+                    if (historyOptions.action) showNotification(`${targetTypes[target.type].name} target deleted.`, 2000);
+                }
+            }
+
+            function updateTrailSVG(target) {
+                if (target.trailPoints.length < 2) {
+                    target.trailG.style.display = 'none';
+                    return;
+                }
+                target.trailG.style.display = '';
+                const points = target.trailPoints.map(latlng => map.latLngToLayerPoint(latlng));
+                const pathString = "M" + points.map(p => `${p.x} ${p.y}`).join(" L");
+                target.trailG.querySelectorAll('path').forEach(p => p.setAttribute('d', pathString));
+
+                const firstPoint = points[0];
+                const lastPoint = points[points.length - 1];
+                target.gradient.setAttribute('x1', firstPoint.x);
+                target.gradient.setAttribute('y1', firstPoint.y);
+                target.gradient.setAttribute('x2', lastPoint.x);
+                target.gradient.setAttribute('y2', lastPoint.y);
+            }
+            map.on('move viewreset', () => activeTargets.forEach(updateTrailSVG));
+
+            function toggleAnalysis() {
+                if (analysisCircle || (circleDrawer && circleDrawer._enabled)) {
+                    if (circleDrawer) circleDrawer.disable();
+                    clearAnalysis();
+                } else {
+                    setActiveMode(null);
+                    circleDrawer = new L.Draw.Circle(map, { shapeOptions: { color: '#0d8eff', weight: 3, fillOpacity: 0.05, opacity: 0.5, renderer: L.canvas() } });
+                    circleDrawer.enable();
+                    ui.buttons.analyze.disabled = true;
+                    showNotification("Draw a circle on the map to analyze the area.");
+                }
+            }
+
+            function clearAnalysis() {
+                if (analysisCircle) {
+                    map.removeLayer(analysisCircle);
+                    analysisCircle = null;
+                }
+                ui.resultsPanel.classList.remove('visible');
+                ui.buttons.analyze.classList.remove('active');
+            }
+
+            map.on(L.Draw.Event.CREATED, (event) => {
+                clearAnalysis();
+                analysisCircle = event.layer;
+                map.addLayer(analysisCircle);
+                analyzeArea(analysisCircle);
+                ui.buttons.analyze.disabled = false;
+                ui.buttons.analyze.classList.add('active');
+                hideNotification();
+            });
+            map.on('draw:drawstop', () => { ui.buttons.analyze.disabled = false; });
+
+            function getVisibleTargets() {
+                return activeTargets.filter(t => !t.pendingDeletion);
+            }
+
+            function updateAllStats() { updateGlobalStats(); if (analysisCircle) analyzeArea(analysisCircle); }
+
+            function updateGlobalStats() {
+                const visibleTargets = getVisibleTargets();
+                const counts = {};
+                visibleTargets.forEach(t => counts[t.type] = (counts[t.type] || 0) + 1);
+                populateStatsList(document.getElementById('global-stats-list'), counts);
+                const hasTargets = visibleTargets.length > 0;
+
+                if (hasTargets && !ui.leftPanels.classList.contains('is-hidden')) {
+                    ui.globalStatsPanel.classList.add('visible');
+                } else if (!hasTargets) {
+                    ui.globalStatsPanel.classList.remove('visible');
+                }
+            }
+
+            function analyzeArea(circle) {
+                const center = circle.getLatLng(),
+                    radius = circle.getRadius(),
+                    counts = {};
+                let totalInArea = 0;
+                getVisibleTargets().forEach(t => {
+                    if (center.distanceTo(t.marker.getLatLng()) <= radius) {
+                        counts[t.type] = (counts[t.type] || 0) + 1;
+                        totalInArea++;
+                    }
+                });
+                populateStatsList(document.getElementById('results-list'), counts, totalInArea);
+                ui.resultsPanel.classList.add('visible');
+            }
+
+            function populateStatsList(ulElement, counts, total = null) {
+                ulElement.innerHTML = '';
+                if (total !== null) {
+                    const totalLi = document.createElement('li');
+                    totalLi.className = 'stats-total';
+                    totalLi.innerHTML = `<span>Total in Area: <strong>${total}</strong></span>`;
+                    ulElement.appendChild(totalLi);
+                    if (Object.keys(counts).length > 0) {
+                        const hr = document.createElement('hr');
+                        hr.className = 'separator';
+                        ulElement.appendChild(hr);
+                    }
+                }
+
+                if (Object.keys(counts).length === 0) { ulElement.innerHTML += '<li class="no-results">No targets found.</li>'; } else {
+                    for (const type in counts) {
+                        const li = document.createElement('li');
+                        const targetInfo = targetTypes[type];
+                        const isEnlarged = type !== 'drone';
+                        li.innerHTML = `<div class="result-icon-wrapper"><div class="result-icon"><img src="${targetInfo.iconUrl}" alt="${targetInfo.name}" class="${isEnlarged ? 'enlarged' : ''}" style="width: 30px; height: 30px;"></div></div><span>${targetInfo.name}: <strong>${counts[type]}</strong></span>`;
+                        ulElement.appendChild(li);
+                    }
+                }
+            }
+
+            function clearAll() {
+                if (!confirm("Are you sure you want to clear the entire scene and all saved data? This action cannot be undone.")) {
+                    return;
+                }
+                activeTargets.forEach(t => {
+                    map.removeLayer(t.marker);
+                    t.trailG.remove();
+                    document.getElementById(`grad-${t.id}`)?.remove();
+                });
+                activeTargets = [], undoStack = [], redoStack = [];
+                clearAnalysis();
+                setActiveMode(null);
+                ui.globalStatsPanel.classList.remove('visible');
+                updateAllStats();
+                updateHistoryButtons();
+                localStorage.removeItem('mapState');
+                showNotification("Scene cleared.", 2000);
+            }
+
+            function addHistory(action, data) {
+                if (isRestoringState) return;
+                undoStack.push({ action, data });
+                redoStack = [];
+                updateHistoryButtons();
+            }
+
+            function undo() {
+                if (undoStack.length === 0) return;
+                const lastAction = undoStack.pop();
+                redoStack.push(lastAction);
+                isRestoringState = true;
+                if (lastAction.action === 'create') { deleteTarget(lastAction.data.targetData.id); } else if (lastAction.action === 'delete') {
+                    const d = lastAction.data.targetData;
+                    createTarget(d.id, d.type, L.latLng(d.latlng), d.rotation, d.trailPoints.map(p => L.latLng(p)));
+                } else if (lastAction.action === 'move') {
+                    const target = activeTargets.find(t => t.id === lastAction.data.targetId);
+                    const before = lastAction.data.before;
+                    if (target) {
+                        target.marker.setLatLng(L.latLng(before.latlng));
+                        target.marker.setRotationAngle(before.rotation);
+                        target.rotation = before.rotation;
+                        target.trailPoints = before.trailPoints.map(p => L.latLng(p));
+                        updateTrailSVG(target);
+                    }
+                }
+                isRestoringState = false;
+                updateHistoryButtons();
+                updateAllStats();
+                saveState();
+            }
+
+            function redo() {
+                if (redoStack.length === 0) return;
+                const nextAction = redoStack.pop();
+                undoStack.push(nextAction);
+                isRestoringState = true;
+                if (nextAction.action === 'create') {
+                    const d = nextAction.data.targetData;
+                    createTarget(d.id, d.type, L.latLng(d.latlng), d.rotation, d.trailPoints.map(p => L.latLng(p)));
+                } else if (nextAction.action === 'delete') {
+                    deleteTarget(nextAction.data.targetData.id);
+                } else if (nextAction.action === 'move') {
+                    const target = activeTargets.find(t => t.id === nextAction.data.targetId);
+                    const after = nextAction.data.after;
+                    if (target) {
+                        target.marker.setLatLng(L.latLng(after.latlng));
+                        target.marker.setRotationAngle(after.rotation);
+                        target.rotation = after.rotation;
+                        target.trailPoints = after.trailPoints.map(p => L.latLng(p));
+                        updateTrailSVG(target);
+                    }
+                }
+                isRestoringState = false;
+                updateHistoryButtons();
+                updateAllStats();
+                saveState();
+            }
+
+            function updateHistoryButtons() {
+                ui.buttons.undo.disabled = undoStack.length === 0;
+                ui.buttons.redo.disabled = redoStack.length === 0;
+            }
+
+            function serializeTarget(target) {
+                return {
+                    id: target.id,
+                    type: target.type,
+                    latlng: target.marker.getLatLng(),
+                    rotation: target.rotation,
+                    trailPoints: target.trailPoints.map(p => ({ lat: p.lat, lng: p.lng }))
+                };
+            }
+
+            function saveMapAsImage() {
+                showNotification("Saving image...", -1);
+                document.body.classList.add('saving-map');
+                if (document.activeElement) document.activeElement.blur();
+
+                // FIX: Do NOT cancel pending deletions when saving. They should be rendered faded.
+                // cancelAllPendingDeletions();
+
+                // Create and inject custom info header
+                const infoHeader = document.createElement('div');
+                const titleText = ui.appTitle.textContent.trim();
+                const dateTime = new Date().toLocaleString();
+                const counts = activeTargets.filter(t => !t.pendingDeletion).reduce((acc, t) => ({ ...acc, [t.type]: (acc[t.type] || 0) + 1 }), {});
+                let statsHtml = '';
+                for (const type in counts) {
+                    if (counts[type] > 0) {
+                        statsHtml += `<span style="display: inline-flex; align-items: center; margin-left: 20px;"><img src="${targetTypes[type].iconUrl}" style="width: 22px; height: 22px; margin-right: 8px;"> ${counts[type]}</span>`;
+                    }
+                }
+
+                infoHeader.innerHTML = `<strong>${titleText}</strong> &nbsp;|&nbsp; ${dateTime} &nbsp;|&nbsp; Total: ${getVisibleTargets().length} ${statsHtml}`;
+                // IMPROVEMENT: Enhanced styling for the info header
+                Object.assign(infoHeader.style, {
+                    position: 'absolute',
+                    top: '15px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    maxWidth: 'calc(100% - 30px)',
+                    padding: '12px 25px',
+                    zIndex: '1500',
+                    background: 'rgba(28, 29, 41, 0.9)',
+                    color: '#e0e0e0',
+                    fontSize: '16px',
+                    fontFamily: 'var(--font-family)',
+                    textAlign: 'center',
+                    backdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                    border: '1px solid var(--border-color)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                });
+                document.getElementById('capture-wrapper').appendChild(infoHeader);
+                const originalTitleDisplay = ui.appTitle.style.display;
+                ui.appTitle.style.display = 'none';
+
+                // FIX: Correctly handle SVG transform for html2canvas rendering
+                const svgPane = svgOverlay.getPane();
+                const originalTransform = svgPane.style.transform;
+                const computedTransform = window.getComputedStyle(svgPane).transform;
+
+                if (computedTransform && computedTransform !== 'none') {
+                    activeTargets.forEach(target => {
+                        if (target.trailG) {
+                            target.trailG.setAttribute('transform', computedTransform);
+                        }
+                    });
+                    svgPane.style.transform = ''; // Use empty string to reset
+                }
+
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        html2canvas(document.getElementById("capture-wrapper"), {
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: '#0d0d1a',
+                            logging: false,
+                            ignoreElements: (element) => element.id === 'notification'
+                        }).then(canvas => {
+                            const link = document.createElement('a');
+                            const safeTitle = titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                            link.download = `${safeTitle}_${Date.now()}.png`;
+                            link.href = canvas.toDataURL("image/png");
+                            link.click();
+                            showNotification("Image saved successfully!", 3000);
+                        }).catch(err => {
+                            showNotification("Error saving image.", 3000);
+                            console.error("html2canvas error:", err);
+                        }).finally(() => {
+                            document.body.classList.remove('saving-map');
+                            document.getElementById('capture-wrapper').removeChild(infoHeader);
+                            ui.appTitle.style.display = originalTitleDisplay;
+
+                            // Restore original SVG transform state
+                            if (computedTransform && computedTransform !== 'none') {
+                                activeTargets.forEach(target => {
+                                    if (target.trailG) {
+                                        target.trailG.removeAttribute('transform');
+                                    }
+                                });
+                                svgPane.style.transform = originalTransform;
+                            }
+                        });
+                    });
+                }, 400);
+            }
+
+            let notificationTimeout;
+
+            function showNotification(message, duration = 3000) {
+                ui.notification.textContent = message;
+                ui.notification.classList.add('visible');
+                if (notificationTimeout) clearTimeout(notificationTimeout);
+                if (duration > 0) notificationTimeout = setTimeout(hideNotification, duration);
+            }
+            const hideNotification = () => ui.notification.classList.remove('visible');
+
+            function setupPanelToggles() {
+                const controlsToggleBtn = document.getElementById('controls-toggle-btn');
+                const controlsCloseBtn = document.getElementById('controls-close-btn');
+                const infoToggleBtn = document.getElementById('info-toggle-btn');
+                const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+                const toggleControlPanel = (show) => {
+                    const shouldBeHidden = show === false || !ui.controlPanel.classList.contains('is-hidden');
+                    ui.controlPanel.classList.toggle('is-hidden', shouldBeHidden);
+                    controlsToggleBtn.style.display = shouldBeHidden ? 'flex' : 'none';
+                    if (!shouldBeHidden && isMobile) {
+                        toggleInfoPanels(false); // Hide info panel if opening control panel on mobile
+                    }
+                };
+
+                const toggleInfoPanels = (show) => {
+                    const shouldBeHidden = show === false || !ui.leftPanels.classList.contains('is-hidden');
+                    ui.leftPanels.classList.toggle('is-hidden', shouldBeHidden);
+                    infoToggleBtn.style.display = shouldBeHidden ? 'flex' : 'none';
+                    infoToggleBtn.classList.toggle('active', !shouldBeHidden);
+
+                    if (!shouldBeHidden) {
+                        updateGlobalStats(); // Refresh stats visibility when opening
+                    }
+                    if (!shouldBeHidden && isMobile) {
+                        toggleControlPanel(false); // Hide control panel if opening info panel on mobile
+                    }
+                };
+
+                controlsToggleBtn.addEventListener('click', () => toggleControlPanel(true));
+                controlsCloseBtn.addEventListener('click', () => toggleControlPanel(false));
+                infoToggleBtn.addEventListener('click', () => toggleInfoPanels(true));
+
+                // Set initial state based on screen size
+                if (isMobile) {
+                    ui.controlPanel.classList.add('is-hidden');
+                    controlsToggleBtn.style.display = 'flex';
+                    ui.leftPanels.classList.add('is-hidden');
+                    infoToggleBtn.style.display = 'flex';
+                    infoToggleBtn.classList.remove('active');
+                } else {
+                    ui.controlPanel.classList.remove('is-hidden');
+                    controlsToggleBtn.style.display = 'none';
+                    ui.leftPanels.classList.remove('is-hidden');
+                    infoToggleBtn.style.display = 'none';
+                    infoToggleBtn.classList.add('active');
+                }
+            }
+
+            setupControls();
+            loadState();
+        });
+    </script>
+</body>
+
+</html>
