@@ -26,7 +26,7 @@ An interactive, browser-based mapping tool for visualizing and analyzing airspac
 
 ## How to Use
 
-1.  **Open the `index_new_trail.html` file**: Since this is a standalone application, you can open it directly in any modern web browser.
+1.  **Open the `index.html` file or [airdefense.github.io](airdefense.github.io)**: Since this is a standalone application, you can open it directly in any modern web browser.
 2.  **Add a Target**:
     -   Select a target type (e.g., "Drone," "Rocket") from the "Tools" panel on the right.
     -   Click once on the map to set the target's starting point.
